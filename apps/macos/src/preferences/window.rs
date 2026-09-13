@@ -39,7 +39,7 @@ pub struct PreferencesWindow {
     /// 「快捷键」页。
     shortcuts: ShortcutsPage,
 
-    /// 自定义文本编辑。
+    /// 自定义短语编辑。
     phrases: PhrasesPage,
 
     /// 「模糊音」页。
@@ -95,7 +95,7 @@ impl PreferencesWindow {
 
         let mut layout = new_layout();
         let phrases = PhrasesPage::build(&mut layout, mtm, &target);
-        pages.push(page("快捷文本", layout));
+        pages.push(page("自定义短语", layout));
 
         let mut layout = new_layout();
         let fuzzy = FuzzyPage::build(&mut layout, mtm, &target);

@@ -78,6 +78,7 @@ impl Engine {
                 })
             }
             InputSource::English
+            | InputSource::Custom
             | InputSource::Shortcut
             | InputSource::Emoji
             | InputSource::Raw

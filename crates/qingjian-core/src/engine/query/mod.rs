@@ -28,13 +28,13 @@ impl Engine {
                 {
                     return Err(error);
                 }
-                let mut query = self.query_expression(
+                Query::custom_only(
+                    self.composition.text(),
+                    self.composition.cursor(),
+                    self.shuangpin.is_some(),
                     self.composition.scope(),
                     self.marked_rest(self.composition.rest()),
-                    Instant::now(),
-                );
-                query.candidates.items.clear();
-                query
+                )
             }
         };
         self.insert_custom_phrases(&mut query.candidates.items);

@@ -61,9 +61,6 @@ impl Engine {
     /// 候选比输入短时（`kaifazhe` 选了 开发），剩余拼音留在缓冲区，壳应接着 [`Self::query`]。
     /// 候选的最后一个音节比输入长时（`kaif` 选了 开发），把输入吃完。
     pub fn commit(&mut self, candidate: &Candidate) -> String {
-        if candidate.kind == CandidateKind::Custom(0) {
-            return String::new();
-        }
         self.commit_with(candidate, InputSource::from(candidate.kind), None)
     }
 

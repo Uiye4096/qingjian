@@ -8,7 +8,7 @@ impl Engine {
         self.full_width_punctuation = enabled;
     }
 
-    /// 原子更新快捷文本，非法规则保持旧值。
+    /// 原子更新自定义短语，非法规则保持旧值。
     pub fn set_custom_phrases(&mut self, phrases: Vec<crate::CustomPhrase>) -> Result<(), String> {
         crate::custom_phrase::validate_phrases(&phrases)?;
         self.custom_phrases = phrases;

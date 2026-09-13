@@ -111,7 +111,7 @@ impl Host {
                         index.map_or(phrases.len(), |i| i + 1),
                     );
                 }
-                self.preferences.set_status("快捷文本已保存");
+                self.preferences.set_status("自定义短语已保存");
                 return;
             }
             (Setting::FullWidthPunctuation, SettingValue::Index(index)) => {

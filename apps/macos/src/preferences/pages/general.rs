@@ -97,7 +97,7 @@ impl GeneralPage {
         note(
             layout,
             mtm,
-            "仅影响标点，字母和数字保持半角；自定义文本原样输出。设置会保存。 ",
+            "仅影响标点，字母和数字保持半角；自定义短语原样输出。设置会保存。 ",
         );
         let english = checkbox(
             mtm,

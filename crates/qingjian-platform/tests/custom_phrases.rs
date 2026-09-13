@@ -52,3 +52,20 @@ fn save_roundtrip_preserves_text_and_rejects_conflicting_positions() {
     assert!(Config::load(&path).is_err());
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn custom_log_source_preserves_existing_shortcut_encoding() {
+    use qingjian_core::InputSource;
+    assert_eq!(
+        serde_json::to_string(&InputSource::Custom).unwrap(),
+        "\"custom\""
+    );
+    assert_eq!(
+        serde_json::from_str::<InputSource>("\"custom\"").unwrap(),
+        InputSource::Custom
+    );
+    assert_eq!(
+        serde_json::from_str::<InputSource>("\"shortcut\"").unwrap(),
+        InputSource::Shortcut
+    );
+}

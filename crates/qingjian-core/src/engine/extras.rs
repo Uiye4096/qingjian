@@ -24,17 +24,8 @@ impl Engine {
             .collect();
         phrases.sort_by_key(|p| p.position);
         for phrase in phrases {
-            while items.len() < phrase.position - 1 {
-                items.push(Candidate {
-                    text: String::new(),
-                    kind: CandidateKind::Custom(0),
-                    syllables: Vec::new(),
-                    reading: None,
-                    translation: None,
-                });
-            }
             items.insert(
-                phrase.position - 1,
+                (phrase.position - 1).min(items.len()),
                 Candidate {
                     text: phrase.text.clone(),
                     kind: CandidateKind::Custom(phrase.position),

@@ -1,4 +1,4 @@
-//! 自定义文本表格与独立编辑表单。
+//! 自定义短语表格与独立编辑表单。
 mod state;
 mod table;
 use crate::preferences::{
@@ -47,6 +47,7 @@ pub struct PhrasesPage {
     /// 编辑中的规则下标；None 为新增。
     selected: Cell<Option<usize>>,
 }
+
 impl PhrasesPage {
     pub fn build(layout: &mut Layout, mtm: MainThreadMarker, target: &PreferencesTarget) -> Self {
         let edit = button(mtm, "编辑…", Setting::EditPhrase, target);
@@ -118,7 +119,7 @@ impl PhrasesPage {
         note_full(
             layout,
             mtm,
-            "快捷文本（保留空格与换行，可输入地址、长文本、符号）：",
+            "自定义短语（保留空格与换行，可输入地址、长文本、符号）：",
         );
         let scroll = NSScrollView::initWithFrame(mtm.alloc(), NSRect::ZERO);
         scroll.setHasVerticalScroller(true);
@@ -178,6 +179,7 @@ impl PhrasesPage {
             selected: Cell::new(None),
         }
     }
+
     pub fn sync(&self, config: &Config) {
         let selected = self
             .selected_row()
@@ -186,9 +188,11 @@ impl PhrasesPage {
         self.table.reloadData();
         self.select_row(selected);
     }
+
     pub fn selected_row(&self) -> Option<usize> {
         usize::try_from(self.table.selectedRow()).ok()
     }
+
     pub fn select_row(&self, index: Option<usize>) {
         if let Some(index) = index {
             self.table.selectRowIndexes_byExtendingSelection(
@@ -201,6 +205,7 @@ impl PhrasesPage {
             }
         }
     }
+
     pub fn load(&self, config: &Config, index: usize) {
         self.select_row(
             index
@@ -208,6 +213,7 @@ impl PhrasesPage {
                 .filter(|&i| i < config.custom_phrases.len()),
         );
     }
+
     pub fn edit(&self, config: &Config, index: Option<usize>) {
         self.selected.set(index);
         let p = index.and_then(|i| config.custom_phrases.get(i));
@@ -220,27 +226,31 @@ impl PhrasesPage {
         self.error.setStringValue(&NSString::from_str(""));
         self.editor
             .setTitle(&NSString::from_str(if index.is_some() {
-                "编辑快捷文本"
+                "编辑自定义短语"
             } else {
-                "新增快捷文本"
+                "新增自定义短语"
             }));
         if let Some(parent) = self.table.window() {
             parent.beginSheet_completionHandler(&self.editor, None);
             self.editor.makeFirstResponder(Some(&self.code));
         }
     }
+
     pub fn close_editor(&self) {
         if let Some(parent) = self.editor.sheetParent() {
             parent.endSheet(&self.editor);
         }
         self.editor.orderOut(None);
     }
+
     pub fn set_error(&self, error: &str) {
         self.error.setStringValue(&NSString::from_str(error));
     }
+
     pub fn selected(&self) -> Option<usize> {
         self.selected.get()
     }
+
     pub fn draft(&self) -> CustomPhrase {
         CustomPhrase {
             code: self.code.stringValue().to_string(),

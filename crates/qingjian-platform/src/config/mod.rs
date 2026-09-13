@@ -45,7 +45,7 @@ pub struct Config {
     /// 常规：学习语言、每页候选数、翻页键、外观。
     pub general: GeneralConfig,
 
-    /// 自定义文本；保存和读取均检查位置冲突。
+    /// 自定义短语；保存和读取均检查位置冲突。
     #[serde(deserialize_with = "deserialize_phrases")]
     pub custom_phrases: Vec<qingjian_core::CustomPhrase>,
 
@@ -167,7 +167,7 @@ layout = "vertical"
 preedit = "both"
 # 英文模式（Caps Lock 亮着）是否给英文候选：Tab 或方向键选词，空格、回车、标点仍原样上屏敲的字母；false 就是纯直通
 english_candidates = true
-# 中文模式下（没在组句时）敲的标点转全角：, . ? ! : ; ( ) 等，数字后面的 . 保持半角。Windows 上悬浮状态条的「，。」格可以点着切；macOS 没有这个开关
+# 中文模式下（没在组句时）敲的标点转全角：, . ? ! : ; ( ) 等，数字后面的 . 保持半角。Windows 上悬浮状态条的「，。」格可以点着切；macOS 在偏好设置中选择默认中文标点模式
 full_width_punctuation = true
 # 英文模式下的同一件事，中英各记一份，状态条切的是当前模式那份；只有 Windows 用
 english_full_width_punctuation = false
@@ -179,6 +179,13 @@ log_level = "info"
 # 输入日志：每次上屏记一行到数据目录的 input-log.jsonl（敲的键、看到的候选、选了什么），只写在这台电脑上，不上传；
 # 用来离线评测排序和训练个人模型。false 不记；「高级」页可以清空
 input_log = true
+
+# 自定义短语示例：取消下面各行注释后启用；同码同位置不能重复。
+# [[custom_phrases]]
+# code = "ww"       # 输入码：1–32 个小写英文字母
+# text = "；"       # 原样上屏的文本，可包含空格与换行
+# position = 1      # 固定候选位置：1–9
+# enabled = true    # 是否启用；停用仍保留位置
 
 [shortcut]
 # 前缀模式键，只能是 v / u / i 之一且互不相同（这三个字母不是任何拼音音节的开头）
@@ -251,7 +258,7 @@ enabled = false
 );
 
 impl Config {
-    /// 保存自定义文本列表，冲突时不修改文件。
+    /// 保存自定义短语列表，冲突时不修改文件。
     pub fn set_custom_phrases(
         path: &Path,
         phrases: &[qingjian_core::CustomPhrase],

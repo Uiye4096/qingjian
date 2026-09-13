@@ -15,7 +15,7 @@ impl Host {
             .engine
             .set_custom_phrases(config.custom_phrases.clone())
         {
-            tracing::warn!(%error, "自定义文本配置未应用");
+            tracing::warn!(%error, "自定义短语配置未应用");
         }
         self.engine.set_mode_keys(config.shortcut.mode);
         self.engine.set_shuangpin(config.general.shuangpin());

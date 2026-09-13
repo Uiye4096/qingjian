@@ -1,3 +1,5 @@
+//! 自定义短语表格的快照与控件引用，供表格回调独立读取。
+
 use objc2::rc::Retained;
 use objc2_app_kit::{NSButton, NSTableView};
 use qingjian_core::CustomPhrase;

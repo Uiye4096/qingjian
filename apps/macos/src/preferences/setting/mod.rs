@@ -50,16 +50,16 @@ pub enum Setting {
     /// 默认中文标点模式。
     FullWidthPunctuation,
 
-    /// 选择已有快捷文本。
+    /// 选择已有自定义短语。
     SelectPhrase,
 
     /// 仅编辑草稿，不立即保存。
     PhraseDraft,
 
-    /// 保存快捷文本。
+    /// 保存自定义短语。
     SavePhrase,
 
-    /// 删除当前快捷文本。
+    /// 删除当前自定义短语。
     DeletePhrase,
 
     /// 新增文本。

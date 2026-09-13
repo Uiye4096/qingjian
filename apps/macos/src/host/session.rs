@@ -27,7 +27,7 @@ pub struct Session {
 }
 
 impl Session {
-    /// 新一轮查询：候选换掉，回到第一页第一项。
+    /// 新一轮查询：候选换掉，选中第一个真实候选。
     pub fn reset(
         &mut self,
         preedit: Option<Preedit>,
@@ -40,7 +40,7 @@ impl Session {
         self.highlighted = (0..self.layout.len())
             .find(|&i| self.layout.candidate(i).is_some())
             .unwrap_or(0);
-        self.page = 0;
+        self.page = self.highlighted / self.layout.page_size();
         self.navigated = false;
     }
 
@@ -84,16 +84,29 @@ impl Session {
         true
     }
 
-    /// 翻页，高亮落到新页第一项。已在首页 / 末页时返回 false。
+    /// 翻页并选中新页第一个真实候选，跳过没有候选的页。
     pub fn turn_page(&mut self, delta: isize) -> bool {
         let pages = self.layout.pages().max(1);
         let current = self.page as isize;
-        let next = (current + delta).clamp(0, pages as isize - 1) as usize;
-        if next == self.page {
-            return false;
+        let mut next = (current + delta).clamp(0, pages as isize - 1) as usize;
+        loop {
+            if next == self.page {
+                return false;
+            }
+            let start = next * self.layout.page_size();
+            if let Some(index) = (start..(start + self.layout.page_size()).min(self.layout.len()))
+                .find(|&i| self.layout.candidate(i).is_some())
+            {
+                self.page = next;
+                self.highlighted = index;
+                break;
+            }
+            let following = next as isize + delta.signum();
+            if following < 0 || following >= pages as isize || delta == 0 {
+                return false;
+            }
+            next = following as usize;
         }
-        self.page = next;
-        self.highlighted = next * self.layout.page_size();
         self.navigated = true;
         true
     }
@@ -161,5 +174,22 @@ mod tests {
         session.reset(None, candidates(12), 9, 2);
         assert!(session.turn_page(1));
         assert!(session.navigated);
+    }
+
+    #[test]
+    fn sparse_custom_positions_keep_highlight_on_real_candidates() {
+        let mut words = candidates(1);
+        words[0].kind = CandidateKind::Custom(9);
+        let mut session = Session::default();
+        session.reset(None, words.clone(), 5, 2);
+        assert_eq!((session.page, session.highlighted), (1, 8));
+        assert!(!session.turn_page(-1));
+        words.extend(candidates(1));
+        session.reset(None, words, 5, 2);
+        assert_eq!((session.page, session.highlighted), (0, 0));
+        assert!(session.turn_page(1));
+        assert_eq!((session.page, session.highlighted), (1, 8));
+        assert!(session.move_highlight(-1));
+        assert_eq!((session.page, session.highlighted), (0, 0));
     }
 }

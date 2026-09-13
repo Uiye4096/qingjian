@@ -1,5 +1,6 @@
 use super::*;
 use crate::{CandidateLayout, CustomPhrase};
+
 fn phrase(code: &str, position: usize, text: &str) -> CustomPhrase {
     CustomPhrase {
         code: code.into(),
@@ -8,6 +9,7 @@ fn phrase(code: &str, position: usize, text: &str) -> CustomPhrase {
         enabled: true,
     }
 }
+
 #[test]
 fn custom_positions_survive_normal_candidates_and_cloud() {
     let mut e = xiaohe();
@@ -32,6 +34,7 @@ fn custom_positions_survive_normal_candidates_and_cloud() {
     assert_eq!(e.commit(&c), "；");
     assert!(e.composition().text().is_empty());
 }
+
 #[test]
 fn custom_conflicts_reject_update_and_disabled_rules_stay_disabled() {
     let mut e = engine();
@@ -55,6 +58,7 @@ fn custom_conflicts_reject_update_and_disabled_rules_stay_disabled() {
             .all(|c| c.text != "不启用")
     );
 }
+
 #[test]
 fn custom_long_text_exact_keys_and_sparse_positions() {
     let mut e = engine();
@@ -62,21 +66,27 @@ fn custom_long_text_exact_keys_and_sparse_positions() {
     e.set_custom_phrases(vec![phrase("abcdefghij", 3, &text)])
         .unwrap();
     e.set_input("abcdefghij");
-    let c = e.query().unwrap().candidates.items[2].clone();
+    let query = e.query().unwrap();
+    let layout = CandidateLayout::new(query.candidates.items, 9, 2);
+    let c = layout.candidate(2).unwrap().clone();
     assert_eq!(e.commit(&c), text);
     e.set_custom_phrases(vec![phrase("ii", 3, "目标")]).unwrap();
     e.set_input("ii");
     let layout = CandidateLayout::new(e.query().unwrap().candidates.items, 9, 2);
     assert_eq!(layout.candidate(2).unwrap().text, "目标");
-    for c in layout
-        .local()
-        .iter()
-        .filter(|c| c.kind == CandidateKind::Custom(0))
-    {
-        assert_eq!(e.commit(c), "");
-    }
+    assert!(layout.local().iter().all(|c| !c.text.is_empty()));
+    assert!(
+        e.last_query
+            .borrow()
+            .as_ref()
+            .unwrap()
+            .candidates
+            .iter()
+            .all(|s| !s.is_empty())
+    );
     assert_eq!(e.composition().text(), "ii");
 }
+
 #[test]
 fn punctuation_mode_does_not_change_custom_text() {
     let mut e = engine();
@@ -99,7 +109,8 @@ fn custom_exact_codes_override_mode_prefixes_but_not_longer_input() {
         .unwrap();
     e.set_input("vv");
     assert!(!e.expression_mode());
-    assert_eq!(e.query().unwrap().candidates.items[1].text, "固定");
+    let layout = CandidateLayout::new(e.query().unwrap().candidates.items, 9, 2);
+    assert_eq!(layout.candidate(1).unwrap().text, "固定");
     e.set_input("vvv");
     assert!(e.expression_mode());
     assert!(
@@ -121,4 +132,28 @@ fn custom_exact_codes_override_mode_prefixes_but_not_longer_input() {
             .iter()
             .all(|c| c.text != "文本")
     );
+}
+
+#[test]
+fn custom_only_query_preserves_raw_preedit_and_logs_custom_source() {
+    let mut e = engine();
+    e.set_custom_phrases(vec![phrase("ii", 3, "目标")]).unwrap();
+    e.set_input("ii");
+    let query = e.query().unwrap();
+    assert_eq!(query.marked_text(), "ii");
+    assert_eq!(query.marked_cursor(), 2);
+    assert_eq!(query.candidates.items.len(), 1);
+    assert_eq!(query.candidates.items[0].kind, CandidateKind::Custom(3));
+    assert_eq!(
+        InputSource::from(query.candidates.items[0].kind),
+        InputSource::Custom
+    );
+}
+
+#[test]
+fn custom_preview_handles_unicode_controls_and_limits() {
+    assert_eq!(CustomPhrase::preview("甲\r\n乙\t🙂尾", 5), "甲↵乙⇥🙂…");
+    assert_eq!(CustomPhrase::preview("甲\n乙", 3), "甲↵乙");
+    assert_eq!(CustomPhrase::preview("甲", 0), "…");
+    assert_eq!(CustomPhrase::preview("", 0), "");
 }

@@ -18,9 +18,10 @@ pub mod punctuation;
 pub mod ranking;
 pub mod sentence;
 pub mod shortcut;
-pub use custom_phrase::CustomPhrase;
 pub mod shuangpin;
 pub mod storage;
+
+pub use custom_phrase::CustomPhrase;
 
 pub use candidate::{
     Candidate, CandidateKind, CandidateLayout, CandidateList, Cell, Language, PartOfSpeech, Sense,
