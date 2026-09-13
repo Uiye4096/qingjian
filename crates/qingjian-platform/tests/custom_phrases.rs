@@ -69,3 +69,61 @@ fn custom_log_source_preserves_existing_shortcut_encoding() {
         InputSource::Shortcut
     );
 }
+
+#[test]
+fn phrase_comments_follow_edits_reordering_and_deletion() {
+    let dir = std::env::temp_dir().join(format!("qingjian-comments-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("config.toml");
+    std::fs::write(
+        &path,
+        r#"# global
+[general]
+page_size = 5 # page
+[[custom_phrases]] # first
+code = "aa" # code
+text = "甲" # text
+position = 1 # position
+enabled = true # enabled
+[[custom_phrases]] # second
+code = "bb"
+text = "乙"
+position = 2
+enabled = true
+"#,
+    )
+    .unwrap();
+    let mut phrases = Config::load(&path).unwrap().custom_phrases;
+    phrases[0].enabled = false;
+    phrases[0].text = "新内容\n第二行".into();
+    phrases[0].code = "cc".into();
+    phrases[0].position = 3;
+    Config::set_custom_phrases(&path, &phrases).unwrap();
+    let saved = std::fs::read_to_string(&path).unwrap();
+    for comment in [
+        "# global",
+        "# page",
+        "# first",
+        "# code",
+        "# text",
+        "# position",
+        "# enabled",
+        "# second",
+    ] {
+        assert!(saved.contains(comment), "{comment}");
+    }
+    assert_eq!(Config::load(&path).unwrap().custom_phrases, phrases);
+    phrases.swap(0, 1);
+    Config::set_custom_phrases(&path, &phrases).unwrap();
+    let saved = std::fs::read_to_string(&path).unwrap();
+    assert!(saved.find("# second").unwrap() < saved.find("# first").unwrap());
+    phrases.remove(0);
+    Config::set_custom_phrases(&path, &phrases).unwrap();
+    let saved = std::fs::read_to_string(&path).unwrap();
+    assert!(saved.contains("# first") && saved.contains("# text"));
+    assert!(!saved.contains("# second"));
+    phrases.clear();
+    Config::set_custom_phrases(&path, &phrases).unwrap();
+    assert!(Config::load(&path).unwrap().custom_phrases.is_empty());
+    std::fs::remove_dir_all(dir).unwrap();
+}

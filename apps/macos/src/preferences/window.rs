@@ -200,8 +200,11 @@ impl PreferencesWindow {
     pub fn set_phrase_error(&self, error: &str) {
         self.phrases.set_error(error);
     }
-    pub fn phrase_draft(&self) -> (Option<usize>, qingjian_core::CustomPhrase) {
-        (self.phrases.selected(), self.phrases.draft())
+    pub fn phrase_draft(
+        &self,
+        config: &Config,
+    ) -> Result<(Option<usize>, qingjian_core::CustomPhrase), String> {
+        Ok((self.phrases.selected(config)?, self.phrases.draft()))
     }
 
     /// 打开（或带到最前）。

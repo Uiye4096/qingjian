@@ -4,8 +4,34 @@ use super::diagnostics::{copy_to_pasteboard, open_with_system};
 use super::*;
 
 impl Host {
+    /// 写短语前读取文件；外部规则有变化时同步列表并请用户重新确认。
+    fn phrases_are_current(&mut self) -> bool {
+        let Some(path) = self.settings.path() else {
+            return false;
+        };
+        match qingjian_platform::Config::load(path) {
+            Ok(latest) if latest.custom_phrases == self.settings.config().custom_phrases => true,
+            Ok(_) => {
+                self.settings.reload();
+                self.apply_config(false);
+                let message = "规则已在其他地方修改，请重新确认后操作。";
+                self.preferences.set_phrase_error(message);
+                self.preferences.set_status(message);
+                false
+            }
+            Err(error) => {
+                self.preferences.set_phrase_error(&error.to_string());
+                self.preferences.set_status(&error.to_string());
+                false
+            }
+        }
+    }
+
     /// 表格中的启用开关只修改所选规则。
     pub fn set_phrase_enabled(&mut self, index: usize, enabled: bool) {
+        if !self.phrases_are_current() {
+            return;
+        }
         let mut phrases = self.settings.config().custom_phrases.clone();
         let Some(phrase) = phrases.get_mut(index) else {
             return;
@@ -82,17 +108,38 @@ impl Host {
                 return;
             }
             (Setting::SavePhrase | Setting::DeletePhrase, _) => {
-                let (index, draft) = self.preferences.phrase_draft();
+                if !self.phrases_are_current() {
+                    return;
+                }
+                let config = self.settings.config();
                 let mut phrases = config.custom_phrases.clone();
+                let mut saved_index = phrases.len();
                 if setting == Setting::DeletePhrase {
                     let Some(index) = self.preferences.selected_phrase() else {
                         return;
                     };
+                    if index >= phrases.len() {
+                        return;
+                    }
                     phrases.remove(index);
-                } else if let Some(index) = index {
-                    phrases[index] = draft;
                 } else {
-                    phrases.push(draft);
+                    let (index, draft) = match self.preferences.phrase_draft(config) {
+                        Ok(value) => value,
+                        Err(error) => {
+                            self.preferences.set_phrase_error(&error);
+                            self.preferences.set_status(&error);
+                            return;
+                        }
+                    };
+                    if let Some(index) = index {
+                        let Some(phrase) = phrases.get_mut(index) else {
+                            return;
+                        };
+                        *phrase = draft;
+                        saved_index = index;
+                    } else {
+                        phrases.push(draft);
+                    }
                 }
                 let Some(path) = self.settings.path() else {
                     return;
@@ -106,10 +153,8 @@ impl Host {
                 self.settings.reload();
                 self.apply_config(false);
                 if setting == Setting::SavePhrase {
-                    self.preferences.select_phrase(
-                        self.settings.config(),
-                        index.map_or(phrases.len(), |i| i + 1),
-                    );
+                    self.preferences
+                        .select_phrase(self.settings.config(), saved_index + 1);
                 }
                 self.preferences.set_status("自定义短语已保存");
                 return;

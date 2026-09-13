@@ -133,9 +133,15 @@ impl PhraseTableSource {
         });
         unsafe { msg_send![super(this), init] }
     }
+
     pub fn attach(&self, table: Retained<NSTableView>) {
         *self.ivars().table.borrow_mut() = Some(table);
     }
+
+    pub fn phrase(&self, index: usize) -> Option<CustomPhrase> {
+        self.ivars().rows.borrow().get(index).cloned()
+    }
+
     pub fn replace(&self, rows: &[CustomPhrase]) {
         *self.ivars().rows.borrow_mut() = rows.to_vec();
     }

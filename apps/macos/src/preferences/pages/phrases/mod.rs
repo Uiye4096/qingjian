@@ -16,7 +16,7 @@ use objc2_app_kit::{
 use objc2_foundation::{NSIndexSet, NSPoint, NSRect, NSSize, NSString};
 use qingjian_core::CustomPhrase;
 use qingjian_platform::Config;
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use table::PhraseTableSource;
 
 pub struct PhrasesPage {
@@ -46,6 +46,9 @@ pub struct PhrasesPage {
 
     /// 编辑中的规则下标；None 为新增。
     selected: Cell<Option<usize>>,
+
+    /// 打开表单时的规则快照，用于识别外部修改并保留草稿。
+    original: RefCell<Vec<CustomPhrase>>,
 }
 
 impl PhrasesPage {
@@ -177,13 +180,15 @@ impl PhrasesPage {
             text,
             enabled,
             selected: Cell::new(None),
+            original: RefCell::new(Vec::new()),
         }
     }
 
     pub fn sync(&self, config: &Config) {
         let selected = self
             .selected_row()
-            .filter(|&i| i < config.custom_phrases.len());
+            .and_then(|i| self._source.phrase(i))
+            .and_then(|old| config.custom_phrases.iter().position(|p| p == &old));
         self._source.replace(&config.custom_phrases);
         self.table.reloadData();
         self.select_row(selected);
@@ -216,6 +221,7 @@ impl PhrasesPage {
 
     pub fn edit(&self, config: &Config, index: Option<usize>) {
         self.selected.set(index);
+        self.original.replace(config.custom_phrases.clone());
         let p = index.and_then(|i| config.custom_phrases.get(i));
         self.code
             .setStringValue(&NSString::from_str(p.map_or("", |p| &p.code)));
@@ -247,8 +253,9 @@ impl PhrasesPage {
         self.error.setStringValue(&NSString::from_str(error));
     }
 
-    pub fn selected(&self) -> Option<usize> {
-        self.selected.get()
+    pub fn selected(&self, config: &Config) -> Result<Option<usize>, String> {
+        unchanged_phrases(&self.original.borrow(), &config.custom_phrases)?;
+        Ok(self.selected.get())
     }
 
     pub fn draft(&self) -> CustomPhrase {
@@ -258,5 +265,43 @@ impl PhrasesPage {
             position: self.position.indexOfSelectedItem() as usize + 1,
             enabled: self.enabled.state() == NSControlStateValueOn,
         }
+    }
+}
+
+// 保存前比较整个列表：删除、重排或同位置替换都不能沿用旧行号。
+fn unchanged_phrases(before: &[CustomPhrase], current: &[CustomPhrase]) -> Result<(), String> {
+    if before != current {
+        Err("规则已在其他地方修改，草稿已保留；请复制草稿后取消并重新打开编辑。".into())
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn editing_rejects_removed_reordered_and_replaced_rules() {
+        let a = CustomPhrase {
+            code: "aa".into(),
+            text: "甲".into(),
+            position: 1,
+            enabled: true,
+        };
+        let b = CustomPhrase {
+            code: "bb".into(),
+            text: "乙".into(),
+            ..a.clone()
+        };
+        let before = vec![a.clone(), b.clone()];
+        assert!(unchanged_phrases(&before, &before).is_ok());
+        assert!(unchanged_phrases(&before, std::slice::from_ref(&a)).is_err());
+        assert!(unchanged_phrases(&before, &[b.clone(), a.clone()]).is_err());
+        let changed = CustomPhrase {
+            text: "新内容".into(),
+            ..b
+        };
+        assert!(unchanged_phrases(&before, &[a, changed]).is_err());
     }
 }
